@@ -2,6 +2,10 @@
 
 Runbooks and operational notes for running Mission Control.
 
+## Additional runbooks
+
+- [Model routing and savings (local-first)](./model-routing-and-savings.md)
+
 ## Health checks
 
 Backend exposes:
