@@ -1,6 +1,10 @@
 # Standalone docker-compose.yml for Dokploy deployment
-# Includes db + redis internally (self-contained)
-# ENV vars injected by Dokploy
+
+networks:
+  dokploy-network:
+    external: true
+  internal:
+    driver: bridge
 
 services:
   db:
@@ -11,22 +15,15 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
 
   redis:
     image: redis:7-alpine
+    networks:
+      - internal
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   backend:
     build:
@@ -43,8 +40,8 @@ services:
     depends_on:
       - db
       - redis
-    ports:
-      - "8000:8000"
+    networks:
+      - internal
     restart: unless-stopped
 
   frontend:
@@ -58,9 +55,18 @@ services:
       NEXT_PUBLIC_AUTH_MODE: ${AUTH_MODE:-local}
     depends_on:
       - backend
-    ports:
-      - "3001:3000"
+    networks:
+      - internal
+      - dokploy-network
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.mc-frontend.rule=Host(`command.leadborn.com`)"
+      - "traefik.http.routers.mc-frontend.entrypoints=websecure"
+      - "traefik.http.routers.mc-frontend.tls=true"
+      - "traefik.http.routers.mc-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mc-frontend.loadbalancer.server.port=3000"
 
   webhook-worker:
     build:
@@ -76,6 +82,8 @@ services:
     depends_on:
       - redis
       - db
+    networks:
+      - internal
     restart: unless-stopped
 
 volumes:
