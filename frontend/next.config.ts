@@ -1,10 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // In dev, Next may proxy requests based on the request origin/host.
-  // Allow common local origins so `next dev --hostname 127.0.0.1` works
-  // when users access via http://localhost:3000 or http://127.0.0.1:3000.
-  // Keep the LAN IP as well for dev on the local network.
   allowedDevOrigins: ["192.168.1.101", "localhost", "127.0.0.1"],
   images: {
     remotePatterns: [
@@ -13,6 +9,17 @@ const nextConfig: NextConfig = {
         hostname: "img.clerk.com",
       },
     ],
+  },
+  async rewrites() {
+    // In production, proxy /api/* to the internal backend service
+    // This avoids needing to expose the backend publicly
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || "http://backend:8000";
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
   },
 };
 
