@@ -1,0 +1,4 @@
+# Dokploy compatibility shim — forwards to compose.yml
+# The actual configuration is in compose.yml
+include:
+  - compose.yml
